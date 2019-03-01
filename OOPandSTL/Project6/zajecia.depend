@@ -1,0 +1,18 @@
+# depslib dependency file v1.0
+1524644900 source:c:\users\lunesco\desktop\c++\projekt 6\zajecia\main.cpp
+	"Osoba.h"
+	<vector>
+	<set>
+	<map>
+	<random>
+	<algorithm>
+
+1524644927 source:c:\users\lunesco\desktop\c++\projekt 6\zajecia\osoba.cpp
+	"Osoba.h"
+
+1524646358 c:\users\lunesco\desktop\c++\projekt 6\zajecia\osoba.h
+	<iostream>
+	<string>
+	<cstdlib>
+	<ctime>
+
