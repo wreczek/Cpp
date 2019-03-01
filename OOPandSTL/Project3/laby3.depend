@@ -1,0 +1,17 @@
+# depslib dependency file v1.0
+1522229168 source:c:\users\lunesco\desktop\c++\projekt 3\laby3\main.cpp
+	<iostream>
+	"Poligon.h"
+	"Piksel.h"
+
+1522229102 c:\users\lunesco\desktop\c++\projekt 3\laby3\poligon.h
+	"Piksel.h"
+
+1522228734 c:\users\lunesco\desktop\c++\projekt 3\laby3\piksel.h
+
+1522229149 source:c:\users\lunesco\desktop\c++\projekt 3\laby3\piksel.cpp
+
+1522229118 source:c:\users\lunesco\desktop\c++\projekt 3\laby3\poligon.cpp
+	"Poligon.h"
+	<iostream>
+
