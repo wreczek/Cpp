@@ -1,0 +1,12 @@
+# depslib dependency file v1.0
+1521659297 source:c:\users\lunesco\desktop\c++\projekt 2\laby2\main.cpp
+	<iostream>
+	"obiekty.h"
+
+1521632490 c:\users\lunesco\desktop\c++\projekt 2\laby2\obiekty.h
+	<istream>
+	<ostream>
+
+1521659483 source:c:\users\lunesco\desktop\c++\projekt 2\laby2\obiekty.cpp
+	"obiekty.h"
+
