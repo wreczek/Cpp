@@ -1,0 +1,87 @@
+# depslib dependency file v1.0
+1523454053 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\figura.cpp
+	"Figura.h"
+	<sstream>
+
+1523438829 c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\figura.h
+	"Punkt.h"
+
+1523455122 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\kolo.cpp
+	"Kolo.h"
+	<sstream>
+
+1523455158 c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\kolo.h
+	"Figura.h"
+
+1523456981 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\kwadrat.cpp
+	"Kwadrat.h"
+	"Prostokat.h"
+
+1523456965 c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\kwadrat.h
+	"Prostokat.h"
+
+1523456811 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\main.cpp
+	<iostream>
+	"Punkt.h"
+	"Figura.h"
+	"Kolo.h"
+	"Prostokat.h"
+	"Kwadrat.h"
+
+1523455122 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\prostokat.cpp
+	"Prostokat.h"
+	<sstream>
+
+1523455779 c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\prostokat.h
+	"Figura.h"
+
+1523457114 c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\punkt.h
+	<istream>
+	<ostream>
+
+1523453761 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\_lab4\punkt.cpp
+	"Punkt.h"
+
+1523454053 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\figura.cpp
+	"Figura.h"
+	<sstream>
+
+1523438829 c:\users\lunesco\desktop\c++\projekt 4\zajecia\figura.h
+	"Punkt.h"
+
+1523457114 c:\users\lunesco\desktop\c++\projekt 4\zajecia\punkt.h
+	<istream>
+	<ostream>
+
+1523455122 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\kolo.cpp
+	"Kolo.h"
+	<sstream>
+
+1523455158 c:\users\lunesco\desktop\c++\projekt 4\zajecia\kolo.h
+	"Figura.h"
+
+1523456981 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\kwadrat.cpp
+	"Kwadrat.h"
+	"Prostokat.h"
+
+1523456965 c:\users\lunesco\desktop\c++\projekt 4\zajecia\kwadrat.h
+	"Prostokat.h"
+
+1523455779 c:\users\lunesco\desktop\c++\projekt 4\zajecia\prostokat.h
+	"Figura.h"
+
+1523457128 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\main.cpp
+	<iostream>
+	"Punkt.h"
+	"Figura.h"
+	"Kolo.h"
+	"Prostokat.h"
+	"Kwadrat.h"
+
+1523455122 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\prostokat.cpp
+	"Prostokat.h"
+	<sstream>
+
+1523453761 source:c:\users\lunesco\desktop\c++\projekt 4\zajecia\punkt.cpp
+	"Punkt.h"
+
