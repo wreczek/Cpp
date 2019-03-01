@@ -1,0 +1,15 @@
+# depslib dependency file v1.0
+1524045259 source:c:\users\lunesco\desktop\c++\projekt 5\laby5\main.cpp
+	<iostream>
+	"outFunc.h"
+	"list.h"
+
+1524040615 c:\users\lunesco\desktop\c++\projekt 5\laby5\outfunc.h
+	<sstream>
+	<string.h>
+
+1524646962 c:\users\lunesco\desktop\c++\projekt 5\laby5\list.h
+	"Exception.h"
+
+1524045259 c:\users\lunesco\desktop\c++\projekt 5\laby5\exception.h
+
