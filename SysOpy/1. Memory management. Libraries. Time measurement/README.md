@@ -21,6 +21,7 @@ Biblioteka powinna umożliwiać:
 Tablice i bloki powinny być alokowane przy pomocy funkcji calloc (alokacja dynamiczna).
 
 Przygotuj plik Makefile, zawierający polecenia kompilujące pliki źródłowe biblioteki oraz tworzące biblioteki w dwóch wersjach: statyczną i współdzieloną.
+
 Zadanie 2. Program korzystający z biblioteki (25%)
 
 Napisz program testujący działanie funkcji z biblioteki z zadania 1.
