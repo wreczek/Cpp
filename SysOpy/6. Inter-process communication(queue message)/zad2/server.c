@@ -1,23 +1,24 @@
-#include <sys/types.h>
-#include <sys/msg.h>
-#include <sys/ipc.h>
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
+#include <assert.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <errno.h>
 #include <unistd.h>
+#include <mqueue.h>
+#include <ctype.h>
 #include <time.h>
+#include <fcntl.h>
+#include <signal.h>
 
 #include "commands.h"
 
 int cqids[10] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
-key_t cqkeys[10];
+pid_t pids[10] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
 int active = 1;
 int counter = 0;
-int q_desc = -1;
-key_t sqkey = -1;
+mqd_t q_desc = -1;
 
 void end(){
     active = 0;
@@ -31,27 +32,34 @@ void handle_sigint(int signum){
 
 void delete_queue(){
     if (q_desc > -1){
-        int tmp = msgctl(q_desc, IPC_RMID, NULL);
-        if (tmp == -1){
-            printf("error on deleting queue");
-        }
-        printf("deleted servers queue successfully");
+        if ( mq_close(q_desc) == -1)      error("mq_close");
+        if (mq_unlink(server_path) == -1) error("mq_unlink");
+        printf("deleted server's queue successfully\n");
     }
 }
 
 void log_in(MyMsg * msg){
     cqids[counter] = msg->cqid;
-    cqkeys[counter] = msg->cqkey;
-    if (msgget(cqkeys[counter], 0) == -1)    error("msgget");
+    pids[counter] = msg->pid;
+    char clientPath[10];
+    sprintf(clientPath, "/%d", pids[counter]);
+    printf("Clients path: %s, pid: %d, cqid: %d\n", clientPath, pids[counter], cqids[counter]);
+    printf("Got pid = %d\n", pids[counter]);
+
+    int cqid = mq_open(clientPath, O_WRONLY);
+    if (cqid == -1)     error("cannot read client's queue");
+
     if (counter >= MAX_CLIENTS){
-        printf("Maximum number of clients exceeded");
+        printf("Maximum number of clients exceeded\n");
         sprintf(msg->mtext, "%d", -1);
+        if (mq_send(cqid, (char*)msg, MSG_SIZE, 1) == -1)   error("login response failed");
+        if (mq_close(cqid) == -1)       error("cannot close client's queue");
     }
     else{
         sprintf(msg->mtext, "%d", counter);
-        while (cqids[counter] > 0 && counter < MAX_CLIENTS) counter++;
+        while (pids[counter] > 0 && counter < MAX_CLIENTS) counter++;
     }
-    if (msgsnd(cqids[counter-1], msg, MSG_SIZE, 0) == -1)   error("login response failed");
+    if (mq_send(cqids[counter-1], (char*)msg, MSG_SIZE, 1) == -1)   error("login response failed");
 }
 
 void echo(MyMsg * msg){
@@ -62,7 +70,7 @@ void echo(MyMsg * msg){
     strftime (napis, 100, "%c", localtime(&sekund));
 
     sprintf(msg->mtext, "%s %s", msg->mtext, napis);
-    if (msgsnd(msg->cqid, msg, MSG_SIZE, 0) == -1)      error("echo msgsnd");
+    if (mq_send(msg->cqid, (char*)msg, MSG_SIZE, 1) == -1)    error("echo msgsnd");
 }
 
 void stop(MyMsg * msg){
@@ -89,14 +97,14 @@ void to_all(MyMsg * msg){
     int i;
     for (i = 0; i < MAX_CLIENTS; ++i){
         if (cqids[i] > 0){
-            if (msgsnd(cqids[i], msg, MSG_SIZE, 0) == -1)
+            if (mq_send(cqids[i], (char*)msg, MSG_SIZE, 1) == -1)
                 error("to_all msgsnd");
         }
     }
 }
 
 void to_one(MyMsg * msg){
-    if (msgsnd(msg->cqkey, msg, MSG_SIZE, 0) == -1)     error("to one msgsnd");
+    if (mq_send(msg->cqid, (char*)msg, MSG_SIZE, 1) == -1)     error("to one msgsnd");
 }
 
 void recognize_and_proceed(MyMsg * msg){
@@ -123,33 +131,32 @@ void recognize_and_proceed(MyMsg * msg){
         break;
         case TOONE:
             to_one(msg);
-            printf("Server sent >>%s<< to %d.\n", msg->mtext, msg->cqkey);
+            printf("Server sent >>%s<< to %d.\n", msg->mtext, msg->pid);
         break;
     }
 }
 
 int main(int argc, char ** argv){
-    if ( atexit(delete_queue) < 0)                        error("atexit()");
-    if ( signal(SIGINT, handle_sigint) == SIG_ERR)        error("signal()");
+    if ( atexit(delete_queue) < 0)                    error("atexit()");
+    if ( signal(SIGINT, handle_sigint) == SIG_ERR)    error("signal()");
 
-    struct msqid_ds current_state;
+    struct mq_attr current_state;
+    struct mq_attr posix_attr;
+    posix_attr.mq_maxmsg = MAX_MSG_Q_SZ;
+    posix_attr.mq_msgsize = MSG_SIZE;
 
-    char * path = getenv("HOME");
-    if (!path)              error("getenv");
+    q_desc = mq_open(server_path, O_RDONLY |
+                    O_CREAT | O_EXCL, 0666, &posix_attr);
 
-    sqkey = ftok(path, PROJECT_ID);
-    if (sqkey == -1)          error("server ftok");
-
-    q_desc = msgget(sqkey, IPC_CREAT | IPC_EXCL | 0666);
-    if (q_desc < 0)         error("server msgget");
+    if (q_desc == -1)   error("cannot create server's queue");
 
     MyMsg msg;
     while(1){
         if (active == 0){
-            if (msgctl(q_desc, IPC_STAT, &current_state) < 0)   error("msgctl");
-            if (counter == 0)                    break;    // current_state.msg_qnum
+            if (mq_getattr(q_desc, &current_state) == -1) error("cannot read queue params");
+            if (current_state.mq_curmsgs == 0) exit(0);
         }
-        if (msgrcv(q_desc, &msg, MSG_SIZE, 0, 0) < 0)           error("msgrcv");
+        if (mq_receive(q_desc, (char*)&msg, MSG_SIZE, NULL) == -1)     error("msgrcv");
         recognize_and_proceed(&msg);
     }
 

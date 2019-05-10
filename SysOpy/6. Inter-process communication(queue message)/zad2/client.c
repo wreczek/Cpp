@@ -1,84 +1,104 @@
+#define _GNU_SOURCE
 
-#include <sys/types.h>
-#include <sys/msg.h>
-#include <sys/ipc.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
+#include <assert.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <fcntl.h>
+#include <errno.h>
 #include <unistd.h>
+#include <mqueue.h>
+#include <ctype.h>
+#include <time.h>
+#include <fcntl.h>
+#include <signal.h>
 
 #include "commands.h"
 
-#define MAX_MSG_LEN 256
-#define MAX_USR_CNT 10
-
-int sqid = -1;
-key_t sqkey = -1;
-
 int cqid = -1;
-key_t cqkey = -1;
 
-int q_desc = -1;
+mqd_t q_desc = -1;
+mqd_t sqid = -1;
 int sessionID = -1;
+char myPath[10];
 
 void recognize_and_proceed(char * , char * );
 void echo(char * string){
     MyMsg msg;
     msg.cqid = cqid;
-    msg.cqkey = cqkey;
+    msg.pid = getpid();
     msg.mtype = ECHO;
     sprintf(msg.mtext, "%s", string);
-    if (msgsnd(q_desc, &msg, MSG_SIZE, 0) < 0)      error("client echo msgsnd failed");
-    if (msgrcv(cqid, &msg, MSG_SIZE, 0, 0) == -1)   error("server response");
+    if (mq_send(q_desc, (char*)&msg, MSG_SIZE, 1) < 0)       error("client echo msgsnd failed");
+    if (mq_receive(cqid, (char*)&msg, MSG_SIZE, NULL) == -1) error("server response");
     printf("Client received: %s\n", msg.mtext);
 }
 
 void list(){
     MyMsg msg;
     msg.cqid = cqid;
-    msg.cqkey = cqkey;
+    msg.pid = getpid();
     msg.mtype = LIST;
     sprintf(msg.mtext, "%s", "List");
-    if (msgsnd(q_desc, &msg, MSG_SIZE, 0) < 0)      error("client list msgsnd failed");
+    if (mq_send(q_desc, (char*)&msg, MSG_SIZE, 1) < 0)      error("client list msgsnd failed");
 }
 
 void to_all(char * string){
     MyMsg msg;
     msg.cqid = cqid;
-    msg.cqkey = cqkey;
+    msg.pid = getpid();
     msg.mtype = TOALL;
     sprintf(msg.mtext, "%s", string);
-    if (msgsnd(q_desc, &msg, MSG_SIZE, 0) < 0)      error("client to_all msgsnd failed");
+    if (mq_send(q_desc, (char*)&msg, MSG_SIZE, 1) < 0)      error("client to_all msgsnd failed");
 }
 
 void to_one(int ID, char * string){
     MyMsg msg;
     msg.cqid = cqid;
-    msg.cqkey = ID;
+    msg.pid = ID;
     msg.mtype = TOONE;
     sprintf(msg.mtext, "%s", string);
-    if (msgsnd(q_desc, &msg, MSG_SIZE, 0) < 0)      error("client to_one msgsnd failed");
+    if (mq_send(q_desc, (char*)&msg, MSG_SIZE, 1) < 0)      error("client to_one msgsnd failed");
 }
 
 void stop(){
     MyMsg msg;
     msg.cqid = cqid;
-    msg.cqkey = cqkey;
+    msg.pid = getpid();
     msg.mtype = STOP;
     sprintf(msg.mtext, "%s", "Stop");
-    if (msgsnd(q_desc, &msg, MSG_SIZE, 0) < 0)      error("client echo msgsnd failed");
+    if (mq_send(q_desc, (char*)&msg, MSG_SIZE, 1) < 0)      error("client echo msgsnd failed");
     exit(0);
 }
 
 void delete_queue(){
-    if ( msgctl(cqid, IPC_RMID, NULL) < 0){
-        printf("main queue remove");
+    if (cqid > -1){
+        if (sessionID >= 0){
+            printf("Need to close all\n");
+        }
+
+        if (mq_close(q_desc) == -1){
+            printf("error on closing server's queue\n");
+        }
+        else {
+            printf("closed server's queue successfully\n");
+        }
+
+        if (mq_close(cqid) == -1) {
+            printf("error on closing clients's queue\n");
+        }
+        else {
+            printf("closed client's queue successfully\n");
+        }
+
+        if (mq_unlink(myPath) == -1) {
+            printf("cannot delete client's queue\n");
+        }
+        else {
+            printf("deleted client's queue successfully\n");
+        }
     }
-    else{
-        printf("Deleted successfully.\n");
+    else {
+        printf("queue doesn't exist\n");
     }
 }
 
@@ -134,47 +154,40 @@ void recognize_and_proceed(char * cmd, char * rest){
     }
 }
 
-int create_queue(char * path, int ID){
-    int key = ftok(path, ID);
-    if (key == -1)    error("ftok in create_queue");
-
-    int QID = msgget(key, 0);
-    if (QID < 0)     error("msgget in create_queue");
-
-    return QID;
-}
-
 void register_client(){
     MyMsg msg;
     msg.mtype = LOGIN;
     msg.cqid = cqid;
-    msg.cqkey = cqkey;
+    msg.pid = getpid();
     sprintf(msg.mtext, "%s", "Login");
 
-    if ( msgsnd(q_desc, &msg, MSG_SIZE, 0) < 0)      error("client login failed");
-    if ( msgrcv(cqid, &msg, MSG_SIZE, 0, 0) < 0)     error("server login response failed");
-    if (sscanf(msg.mtext, "%d", &sessionID) < 1)     error("sscanf login failed");
-    if (sessionID < 0)                               error("servers queue full");
+    if (mq_send(q_desc, (char*)&msg, MSG_SIZE, 1) < 0)     error("client login failed");
+    if (mq_receive(cqid, (char*)&msg, MSG_SIZE, NULL) < 0) error("server login response failed");
+    if (sscanf(msg.mtext, "%d", &sessionID) < 1)           error("sscanf login failed");
+    if (sessionID < 0)                                     error("servers queue full");
 
     printf("Client registered with session ID %d.\n", sessionID);
 }
 
 int main(int argc, char ** argv){
-    if ( atexit(delete_queue) < 0)                  error("atexit");
+    printf("My PID = %d\n", getpid());
+    if ( atexit(delete_queue) == -1)                error("atexit");
     if ( signal(SIGINT, handle_sigint) == SIG_ERR)  error("signal");
 
-    char * path = getenv("HOME");
-    if (!path)                                      error("getenv");
+    sprintf(myPath, "/%d", getpid());
 
-    q_desc = create_queue(path, PROJECT_ID);
+    q_desc = mq_open(server_path, O_WRONLY);
+    if (q_desc == -1)   error("cannot open server's queue");
 
-    cqkey = ftok(path, getpid());
-    if (cqkey == -1)              error("cannot generate clients queue key");
+    struct mq_attr posixAttr;
+    posixAttr.mq_maxmsg = MAX_MSG_Q_SZ;
+    posixAttr.mq_msgsize = MSG_SIZE;
 
-    cqid = msgget(cqkey, IPC_CREAT | IPC_EXCL | 0666);
-    if (cqid < 0)                 error("clients msgget");
+    cqid = mq_open(myPath, O_RDONLY | O_CREAT | O_EXCL,
+                   0666, &posixAttr);
+    if (cqid == -1)     error("cannot create client's queue");
 
-
+    printf("client cqid = %d\n", cqid);
     register_client();
 
     char * buff;
