@@ -29,7 +29,7 @@ void empty_the_truck(){   // DEPARTURE
 }
 
 void clean_memory() {
-    if (shmdt(trucker) < 0) error("Detach shared memory.\n");
+    if(shmdt(trucker) < 0) error("Detach shared memory.\n");
     if(sem_id != 0) {
         semctl(sem_id, 0, IPC_RMID);
     }
@@ -66,7 +66,8 @@ Trucker wypisuje cyklicznie:
 
 void init_trucker(){
     // co jest do chuja
-
+	key_t key = ftok(PROJECT_PATH, PROJECT_ID);
+	sem_id 	  = semget(key, 
 }
 
 int main(int argv, char ** argc){

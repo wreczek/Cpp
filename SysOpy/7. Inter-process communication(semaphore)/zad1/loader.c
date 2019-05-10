@@ -11,7 +11,7 @@ void put_package_on_conveyor(){ // SHIPING
     // set current_time in client structure
 }
 
-void awaiting_for_tape(){
+void awaiting_for_tape(){ // AWAITING
     printf("Awaiting for the production tape to be released: %lo", current_time());
 }
 
@@ -50,13 +50,13 @@ Kazdy komunikat pracownika zawiera:
 
 /// Ladowanie na tasme informuje o liczbie wolnych miejsc oraz jednostek
 
-void limited_action(int C){
+void limited_action(int C, int w){
     for (int j = C; i >= 0; --j){
         printf("Przebieg petli!\n");
     }
 }
 
-void infinite_action(){
+void infinite_action(int w){
     while(1){
         printf("NIESKONCZONOSC!\n");
     }
@@ -72,7 +72,7 @@ int main(int argc, char ** argv){
         int C = atoi(argv[3]);
         for(int i = 0; i < loaders_num; ++i){
             if (!fork()){
-                limited_action(C);
+                limited_action(C, i+1);
                 exit(0);
             }
         }
@@ -80,7 +80,7 @@ int main(int argc, char ** argv){
     else { // arg C not provided
         for(int i = 0; i < loaders_num; ++i){
             if (!fork()){
-                infinite_action(C);
+                infinite_action(i+1);
                 exit(0); // potrzebne?
             }
         }
