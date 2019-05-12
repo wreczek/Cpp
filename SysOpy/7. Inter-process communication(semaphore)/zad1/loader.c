@@ -1,77 +1,72 @@
 #include "shared_utils.h"
 
-enum Client_status status;
-int shared_memory_id;
 int loaders_num;
 int sem_id;
+key_t key;
+int shmid;
 int N;
 
-void put_package_on_conveyor(){ // SHIPING
-    printf("Placed %d weighted package by %d: %lo", N, getpid(), current_time());
-    // set current_time in client structure
+void awaiting_for_conveyor(){ // AWAITING
+    sleep(3);
+    printf("%d is waiting for the production tape to be released: %lo", getpid(), current_time());
 }
 
-void awaiting_for_tape(){ // AWAITING
-    printf("Awaiting for the production tape to be released: %lo", current_time());
+void put_package_on_conveyor(int w){ // SHIPING
+    sleep(3);
+    while (!is_conveyor_available()){
+        awaiting_for_conveyor();
+    }
+
+    printf("Placed %d weighted package by %d: %lo\n", N, getpid(), current_time());
+    printf("%d: There is %d/%d[kg] space and %d/%d units left: %lo.\n",
+            getpid(),
+            conveyor->curr_m,
+            conveyor->M,
+            conveyor->curr_k,
+            conveyor->K,
+            current_time()
+    );
+    int current = conveyor->current_insert;
+    conveyor->times[current] = current_time();
+    conveyor->pids[current] = getpid();
+    conveyor->weights[current] = w;
+    conveyor->curr_k += 1;
+    conveyor->curr_m += w;
+    conveyor->current_insert = (conveyor->current_insert + 1) % conveyor->K;
 }
 
 void init_loaders(){
-
+    if ((key = ftok(PROJECT_PATH, PROJECT_ID)) < 0) /* --> */       error("ftok");
+    if ((shmid = shmget(key, sizeof(struct Conveyor), S_IRWXU)) < 0)error("shmget");
+    if ((conveyor = shmat(shmid, NULL, 0)) == (void*) -1) /* --> */ error("shmat");
+    if ((sem_id = semget(key, 0, 0)) < 0) /* --> */                 error("semget");
 }
 
-/// Paczka masa:         1..N
-/// Ciezarowka masa:     1..X
-/// Tasma liczba paczek: 1..K
-/// Tasma masa paczek:   1..M
-
-/// Pracowników uruchamiamy fork i exec - argument programu
-/// ID pracownikow - PID
-/// Tasmy transportowe trzymamy w pamieci wspolnej
-/// Pamiec wspolna i semafory tworzy i usuwa program trucker
-/// obsluguje SIGINT do usuwania pamiec wspolna i semafory
-/// jesli uruchamiamy najpierw loadera zwraca wyjatek(perror?)
-/// gdy trucker konczy prace blokuje semafor tasmy dla pracownikow, laduje to co zostalo na tasmie (W POSIXie jeszcze informuje pracownikow
-///      aby ze swojej strony pozamykali procesy synchronizacyjne i pousuwac je
-
-/**
-Wypisuje cyklicznie informacje:
-    1. Zaladowanie paczki na tasme:
-        - N jednostek
-        - PID pracownika
-        - czas zaladowania
-    2. Czekanie na zwolnienie tasmy
-**/
-
-/**
-Kazdy komunikat pracownika zawiera:
-    - znacznik czasowy z dokladnoscia do mikrosekund
-    - PID
-**/
-
-/// Ladowanie na tasme informuje o liczbie wolnych miejsc oraz jednostek
-
 void limited_action(int C, int w){
-    for (int j = C; i >= 0; --j){
-        printf("Przebieg petli!\n");
+    for (int i = C; i >= 0; --i){
+        put_package_on_conveyor(w);
     }
+    exit(0);
 }
 
 void infinite_action(int w){
     while(1){
-        printf("NIESKONCZONOSC!\n");
+        put_package_on_conveyor(w);
     }
+    exit(0);
 }
 
 int main(int argc, char ** argv){
     if (argc > 4 || argc < 2)  error("Bad args number");
-    N = atoi(argc[1]); // ladunek o takiej masie wrzuca ten pracownik
+    N = atoi(argv[1]);
     loaders_num = atoi(argv[2]);
     init_loaders();
 
-    if (argv == 4){ // arg C provided
+    if (argc == 4){ // arg C provided
         int C = atoi(argv[3]);
         for(int i = 0; i < loaders_num; ++i){
             if (!fork()){
+/// Pracowników uruchamiamy fork i exec - argument programu
                 limited_action(C, i+1);
                 exit(0);
             }
