@@ -1,4 +1,4 @@
-Zadanie 1. Prosty chat - System V (50%)
+# Zadanie 1. Prosty chat - System V (50%)
 
 Napisz prosty chat typu klient-serwer, w którym komunikacja zrealizowana jest za pomocą kolejek komunikatów - jedna, na zlecenia klientów dla serwera, druga, prywatna, na odpowiedzi.
 
