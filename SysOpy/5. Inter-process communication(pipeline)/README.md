@@ -1,4 +1,4 @@
-Zadanie 1 (55%)
+# Zadanie 1 (55%)
 
 Napisz interpreter poleceń przechowywanych w pliku (sciezka do pliku to pierwszy argument wywolania programu).
 
