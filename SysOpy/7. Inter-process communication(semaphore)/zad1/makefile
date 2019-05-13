@@ -10,6 +10,7 @@ clean:
 	rm -f *.o
 	rm -f trucker
 	rm -f loader
+	rm -f test
 	
 compile:
 	make clean
