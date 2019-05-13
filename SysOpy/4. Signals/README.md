@@ -5,7 +5,7 @@
     Zrealizuj powyższe zadanie, tworząc program potomny, który będzie wywoływał jedną z funkcji z rodziny exec skrypt shellowy zawierający zapętlone systemowe polecenie date. Proces macierzysty będzie przychwytywał powyższe sygnały i przekazywał je do procesu potomnego, tj po otrzymaniu SIGTSTP kończy proces potomka, a jeśli ten został wcześniej zakończony, tworzy nowy, wznawiając działanie skryptu, a po otrzymaniu SIGINT kończy działanie potomka (jeśli ten jeszcze pracuje) oraz programu.
 
 
-Zadanie 2 (35%)
+# Zadanie 2 (35%)
 
 Zmodyfikuj program 2 (monitor - wersję z alokowaniem pamięci) z poprzedniego zestawu tak, aby to program macierzysty był odpowiedzialny za zakończenie procesów potomnych. Nie ma ograniczenia czasowego dla działania programu. Po uruchomieniu programu proces macierzysty wypisuje listę plików przydzielonych do określonych procesów potomnych. Po utworzeniu procesów potomnych, które działają w nieskończonych pętlach proces macierzysty nie przechodził w stan uśpienia, czekając na zakończenie procesów, tylko obiera komendy od użytkownika:
 
@@ -19,7 +19,7 @@ Zmodyfikuj program 2 (monitor - wersję z alokowaniem pamięci) z poprzedniego z
 Zdefiniuj dodatkowo obsługę sygnału SIGINT, który będzie działał jak END, czyli wypisze raport końcowy.
 
 
-Zadanie 3 (40%)
+# Zadanie 3 (40%)
 
 Napisz dwa programy: sender program wysyłający sygnały SIGUSR1 i  catcher - program zliczający ilość odebranych sygnałów. Ilość sygnałów SIGUSR1 wysyłanych przez pierwszy program powinna być określana w parametrze wywołania tego programu. Program catcher jest uruchamiany najpierw, wypisuje swój numer PID i czeka na sygnały SIGUSR1 i SIGUSR2. Wszystkie pozostałe sygnały są blokowane. Program sender przyjmuje trzy parametry: PID procesu catcher, ilość sygnałów do wysłania i tryb wysłania sygnałów.
 
