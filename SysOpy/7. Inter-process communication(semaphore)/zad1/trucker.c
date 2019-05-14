@@ -5,6 +5,7 @@ int shmid;
 int semid;
 int X, K, M;
 int current;
+timeval tm;
 
 void SIGINT_handler(int signum){
     printf("Finished unloading.\n");
@@ -13,14 +14,16 @@ void SIGINT_handler(int signum){
 
 void arrival(){      // ARRIVAL
     sleep(1);
-    printf("Truck just arrived: %lo\n", current_time());
+    tm = current_time();
+    printf("Truck just arrived: %ld.%ld\n", tm.tv_sec, tm.tv_usec);
     conveyor->t_status = WAITING;
 }
 
 void waiting(){      // WAITING
     sleep(1);
+    tm = current_time();
     printf("Current remove = %d, pids[..] = %d\n", conveyor->current_remove, conveyor->pids[conveyor->current_remove]);
-    printf("Truck is ready for loading: %lo\n", current_time());
+    printf("Truck is ready for loading: %ld.%ld\n\n", tm.tv_sec, tm.tv_usec);
     if (conveyor->pids[conveyor->current_remove] > 0)
         conveyor->t_status = LOADING;
 }
@@ -33,19 +36,33 @@ void take_package(){ // LOADING
         return;
     }
 
-    pid_t client_pid = conveyor->pids[current];
-    long client_time = conveyor->times[current];
     int weight = conveyor->weights[current];
+    pid_t client_pid = conveyor->pids[current];
+    timeval c_time = conveyor->times[current];
+    tm = gettime();
     if (conveyor->truck_left_space >= weight){
         conveyor->curr_k -= 1;
         conveyor->curr_m -= weight;
         conveyor->pids[current] = -1;   // zebym wiedzial ze puste
         conveyor->truck_left_space -= weight;
         conveyor->current_remove = (current + 1) % K;
-        printf("Package %dkg from %d was being processed for %loμs. %d/%d and %d/%d left.\n",
+
+        time_t secs;
+        suseconds_t usecs;
+
+        if (tm.tv_usec - c_time.tv_usec < 0){
+            secs = tm.tv_sec - c_time.tv_sec;
+            usecs = c_time.tv_usec - tm.tv_usec;
+        }
+        else{
+            secs = tm.tv_sec - c_time.tv_sec;
+            usecs = tm.tv_usec - c_time.tv_usec;
+        }
+
+        printf("Package %dkg from %d was being processed for %ld.%lds. %d/%d and %d/%d left.\n",
                 weight,
                 client_pid,
-                gettime()-client_time,
+                secs, usecs,
                 M - conveyor->curr_m, M,
                 K - conveyor->curr_k, K
         );
@@ -59,21 +76,22 @@ void take_package(){ // LOADING
 }
 
 void empty_the_truck(){   // DEPARTURE
-    take_trucker_sem(semid); // blokujemy wstawianie na tasme
+    trucker_acquire(semid); // blokujemy wstawianie na tasme
     sleep(1);
-    printf("Truck is full %d/%d: %lo\n",
+    tm = current_time();
+    printf("Truck is full %d/%d: %ld.%ld\n",
             X-conveyor->truck_left_space,
             X,
-            current_time()
+            tm.tv_sec, tm.tv_usec
     );
     conveyor->truck_left_space = X;
     conveyor->t_status = ARRIVAL;
-    release_trucker_sem(semid);
+    trucker_release(semid);
 }
 
 void clean_memory() {
     conveyor->t_status = ARRIVAL; // blokuje przez petle while
-    //take_trucker_sem(semid);      // blokuje semaforem, nie zwalnia go (chyba tak nie moze byc)
+    trucker_acquire(semid);
     while (!is_conveyor_empty()){
         if (conveyor->t_status == DEPARTURE)
             empty_the_truck();
@@ -88,13 +106,21 @@ void clean_memory() {
 void init_trucker(){
     if (signal(SIGINT, SIGINT_handler) == SIG_ERR)  error("signal");
     if (atexit(clean_memory) != 0)     error("atexit");
-	if ((key    = ftok(PROJECT_PATH, PROJECT_ID)) == -1)    /* --> */            error("ftok");
-	if ((shmid  = shmget(key, sizeof(struct Conveyor), S_IRWXU|IPC_CREAT)) < 0)  error("shmget");
-    if ((conveyor = shmat(shmid, NULL, 0)) == (void*) -1)   /* --> */            error("shmat");
-	if ((semid = semget(key, 2, S_IRWXU|IPC_CREAT)) < 0)  /* --> */              error("semget");
+    if ((key    = ftok(PROJECT_PATH, PROJECT_ID)) == -1)    /* --> */     error("ftok");
+    if ((shmid  = shmget(key, sizeof(Conveyor), S_IRWXU|IPC_CREAT)) < 0)  error("shmget");
+    if ((conveyor = shmat(shmid, NULL, 0)) == (void*) -1)   /* --> */     error("shmat");
+    if ((semid = semget(key, 4, S_IRWXU|IPC_CREAT)) < 0)  /* --> */       error("semget");
+
+    semun arg2;
+    semun arg3;
+
+    arg2.val = K;
+    arg3.val = M;
 
     if (semctl(semid, 0, SETVAL, 0) < 0)  /* --> */                       error("semtctl 1");
     if (semctl(semid, 1, SETVAL, 0) < 0)  /* --> */                       error("semtctl 2");
+    if (semctl(semid, 2, SETVAL, arg2) < 0)  /* --> */                    error("semtctl 3");
+    if (semctl(semid, 3, SETVAL, arg3) < 0)  /* --> */                    error("semtctl 4");
 
     conveyor->t_status = ARRIVAL;
     conveyor->K = K;
@@ -115,12 +141,12 @@ int main(int argv, char ** argc){
     X = atoi(argc[1]);
     K = atoi(argc[2]);
     M = atoi(argc[3]);
-    s_time = gettime();
-
     init_trucker();
 
-    release_the_semaphore(semid);
-    release_trucker_sem(semid);
+    conveyor->s_time = gettime();
+
+    release_conveyor(semid);
+    trucker_release(semid);
 
     while(1){
         switch(conveyor->t_status){
