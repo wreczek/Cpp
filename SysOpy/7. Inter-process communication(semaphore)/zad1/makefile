@@ -19,8 +19,8 @@ compile:
 	
 run_trucker:
 	make compile
-	./trucker 100, 16, 50
+	./trucker 100 16 50
 	
 run_loader:
 	make compile
-	./loader 10, 5, 10
+	./loader 5 4 3
