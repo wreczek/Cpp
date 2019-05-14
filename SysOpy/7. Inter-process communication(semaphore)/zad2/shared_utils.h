@@ -10,6 +10,7 @@
 #include <sys/sem.h>
 #include <sys/shm.h>
 #include <sys/ipc.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
@@ -18,8 +19,10 @@
 
 
 #define MAX_PCKGS_NUM 256
-#define T_SEM_NAME "/xAAAB"
-#define L_SEM_NAME "/xAAAC"
+#define T_SEM_NAME "/xAAAN"
+#define L_SEM_NAME "/xAABN"
+
+typedef struct timeval timeval;
 
 /** Arguments:
     - trucker.c:
@@ -32,9 +35,9 @@
         C to liczba cykli
 */
 
-long * s_time; // start time, bedzie obszarem dzielonym pamieci
+int * acc;
 int RDWR_CREAT_EXCL =  O_RDWR | O_CREAT | O_EXCL;
-mode_t S_IRWXU_G = S_IRWXU | S_IRWXG;
+mode_t S_IRWXU_G = S_IRWXU | S_IRWXG|0666;
 int PROT_RD_WR = PROT_READ | PROT_WRITE;
 
 enum trucker_status{
@@ -53,17 +56,18 @@ typedef enum loader_status loader_status;
 
 struct Conveyor{
     trucker_status t_status;
+    pid_t loaders_pid;
     int K;       // max liczba sztuk
     int curr_k;  // aktualna liczba sztuk
     int M;       // max waga
     int curr_m;  // aktualna waga
-    int current_insert; // miejsce pod ktorym mozemy (po weryfikacji) wsadzic loadera ???
+    int current_insert; // miejsce pod ktorym mozemy (po weryfikacji) wsadzic loadera
     int current_remove; // stad pierwsza paczka do wziecia
     pid_t pids[MAX_PCKGS_NUM];  // kolejka pidow loaderow
-    long double times[MAX_PCKGS_NUM];  // czasy polozenia na tasmie
     int weights[MAX_PCKGS_NUM]; // waga poszczegolnych paczek
+    timeval times[MAX_PCKGS_NUM];  // czasy polozenia na tasmie
     int truck_left_space;
-
+    timeval s_time;
 } *conveyor;
 typedef struct Conveyor Conveyor;
 
@@ -72,18 +76,24 @@ void SIGINT_handler(int signum){
     exit(EXIT_SUCCESS);
 }
 
-double gettime(){
-    struct timespec time;
-    double elapsed;
-
-    clock_gettime(CLOCK_MONOTONIC, &time);
-    elapsed = (time.tv_sec - time.tv_sec);
-    elapsed += (time.tv_nsec - time.tv_nsec) / 1000000000.0;
-    return elapsed;
+struct timeval gettime(){
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    return time;
 }
 
-double current_time(){
-    return gettime() - s_time;
+struct timeval current_time(){
+    struct timeval time, ret_time;
+    gettimeofday(&time, NULL);
+    if (time.tv_usec - conveyor->s_time.tv_usec < 0){
+        ret_time.tv_sec = time.tv_sec - conveyor->s_time.tv_sec-1;
+        ret_time.tv_usec = conveyor->s_time.tv_usec - time.tv_usec;
+    }
+    else {
+        ret_time.tv_sec = time.tv_sec - conveyor->s_time.tv_sec-1;
+        ret_time.tv_usec = time.tv_usec - conveyor->s_time.tv_usec;
+    }
+    return ret_time;
 }
 
 void error(char * msg){
@@ -92,20 +102,20 @@ void error(char * msg){
 }
 
 /// ^^^^^ SEMAPHORES ^^^^^
-void pick_up_loaders_sem(sem_t * sem){
+void loaders_acquire(sem_t * sem){
     if (sem_wait(sem) == -1) /* --> */ error("sem_wait");
 }
 
-void release_loaders_sem(sem_t * sem){
+void loaders_release(sem_t * sem){
     if (sem_post(sem) == -1) /* --> */ error("sem_post");
 }
 
 // te ponizej robia to samo, ale latwiej w kodzie sie odnalezc
-void pick_up_truckers_sem(sem_t * sem){
+void truckers_acquire(sem_t * sem){
     if (sem_wait(sem) == -1) /* --> */ error("sem_wait");
 }
 
-void release_truckers_sem(sem_t * sem){
+void truckers_release(sem_t * sem){
     if (sem_post(sem) == -1) /* --> */ error("sem_post");
 }
 /// $$$$$ SEMAPHORES $$$$$
