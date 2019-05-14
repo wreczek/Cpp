@@ -1,4 +1,4 @@
-Zadanie 1 (55%)
+# Zadanie 1 (55%)
 
 Napisz interpreter poleceń przechowywanych w pliku (sciezka do pliku to pierwszy argument wywolania programu).
 
@@ -10,7 +10,7 @@ Dla każdej  takiej linii interpreter powinien uruchomić wszystkie N poleceń w
 
 Uwaga: należy użyć pipe/fork/exec, nie popen
 
-Zadanie 2 (45%)
+# Zadanie 2 (45%)
 
 Należy napisać dwa programy - master oraz slave - które będą komunikować się poprzez potok nazwany (kolejkę FIFO), do której ścieżkę będą dostawać jako argument wywołania. Do potoku pisać będzie wiele procesów wykonujących program slave, a czytał będzie z niej jeden proces master.
 
