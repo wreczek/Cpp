@@ -1,3 +1,0 @@
-ECHO "upa"
-ECHO "nic"
-LIST
